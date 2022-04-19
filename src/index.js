@@ -62,15 +62,13 @@ function Init(){
     mass: 0.5 ,
     position: new CANNON.Vec3(0, ballheight, 0),
     shape: sphereShape,
-    material: new CANNON.Material({
-      friction: 0.5,
-      restitution: 0.8
-    })
+    material: spherePhysicalMaterial
   });
   sphereBody.velocity.set(0, 0, 0);
   sphereBody.angularVelocity.set(0, 0, 0);
   sphereBody.force.set(0, 0, 0);
   sphereBody.addShape(sphereShape);
+  sphereBody.applyLocalForce(new CANNON.Vec3(50, 0, 0), new CANNON.Vec3(0, 0, 0), true);
   world.add(sphereBody);
   //创建上面球体的网格
   sphereMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
@@ -82,21 +80,26 @@ function Init(){
 //创建刚体球体
 var ballheight = 150;
 var sphereShape = new CANNON.Sphere(8);
+var spherePhysicalMaterial = new CANNON.Material({
+  friction: 0,
+  restitution: 0.8
+});
 var sphereBody = new CANNON.Body({ 
   mass: 0.5 ,
   position: new CANNON.Vec3(0, ballheight, 0),
   shape: sphereShape,
-  material: new CANNON.Material({
-    friction: 0.5,
-    restitution: 0.8
-  })
+  material: spherePhysicalMaterial
 });
 sphereBody.addShape(sphereShape);
 world.add(sphereBody);
 
 //创建上面球体的网格
-var sphereGeometry = new THREE.SphereGeometry(8, 10, 10);
-var sphereMaterial = new THREE.MeshLambertMaterial({ color: 0x0000ff });
+var sphereGeometry = new THREE.SphereGeometry(8, 20, 20);
+var sphereMaterial = new THREE.MeshPhysicalMaterial({ 
+  color: 0xcccccc, 
+  metalness: 1, 
+  roughness: 0.4 
+});
 var sphereMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
 sphereMesh.position.set(0, ballheight, 0);
 scene.add(sphereMesh);
@@ -104,23 +107,26 @@ scene.add(sphereMesh);
 
 //创建地面刚体
 var planeShape = new CANNON.Plane();
+var planePhysicalMaterial = new CANNON.Material({
+  friction: 0,
+  restitution: 0.9
+});
 var planeBody = new CANNON.Body({
   mass: 0,
   shape: planeShape,
   position: new CANNON.Vec3(0, 0, 0),
   quaternion: new CANNON.Quaternion().setFromEuler( - Math.PI / 2, 0, 0),
-  material: new CANNON.Material({
-    restitution: 1,
-    friction: 0.5
-  })
+  material: planePhysicalMaterial
 });
 planeBody.addShape(planeShape);
 world.add(planeBody);
 
 //创建地面网格
 var planeGeometry = new THREE.PlaneGeometry(1000, 1000, 100, 100);
-var planeMaterial = new THREE.MeshLambertMaterial({ 
-  texture: new THREE.TextureLoader().load('./static/floortexture.jpg')
+var planeMaterial = new THREE.MeshPhysicalMaterial({ 
+  color: 0xdddddd,
+  metalness: 0.8,
+  roughness: 0.5
 });
 var planeMesh = new THREE.Mesh(planeGeometry, planeMaterial);
 planeMesh.receiveShadow = true;
@@ -128,27 +134,16 @@ planeMesh.rotation.z = -Math.PI / 2;
 planeMesh.position.y = -0.5;
 scene.add(planeMesh);
 
-//将上面创建的刚体球体和网格关联起来并为物理世界开启持续更新
-function update(){
-  requestAnimationFrame(update)
-  world.step(1 / 60) 
-  if (sphereMesh) { 
-    if (sphereMesh.position.y < 0) { // 如果球体落地
-      sphereMesh.position.y = 0;
-      sphereBody.velocity.set(0, 0, 0);
-      sphereBody.angularVelocity.set(0, 0, 0);
-    }
-    sphereMesh.position.copy(sphereBody.position) 
-    sphereMesh.quaternion.copy(sphereBody.quaternion) 
-  } 
-  if (planeMesh) { 
-    planeMesh.position.copy(planeBody.position) 
-    planeMesh.quaternion.copy(planeBody.quaternion) 
+//创建联系材质
+const contactMaterial = new CANNON.ContactMaterial(
+  planePhysicalMaterial,
+  spherePhysicalMaterial,
+  {
+    friction : 0,
+    restitution : 0.9,
   }
-}
-
-
-
+)
+world.addContactMaterial(contactMaterial);
 /**
  * Object
  */
@@ -221,8 +216,8 @@ controls.touches = {
 const ambientLight = new THREE.AmbientLight(0xffffff, 1)
 scene.add(ambientLight);
 //添加一个点光源
-const pointLight = new THREE.DirectionalLight(0xff0000, 1);
-pointLight.position.set(0, 50, 0);
+const pointLight = new THREE.DirectionalLight(0xffffff, 1);
+pointLight.position.set(50, 200, 0);
 let helper = new THREE.DirectionalLightHelper(pointLight, 10);
 scene.add(pointLight);
 scene.add(helper);
@@ -243,13 +238,37 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
+
+//将上面创建的刚体和网格关联起来并为物理世界开启持续更新
+function update(){
+  requestAnimationFrame(update)
+  // console.log(sphereBody.velocity)
+  world.step(1 / 60) 
+  if (sphereMesh) { 
+    if (sphereMesh.position.y < 0) { // 如果球体落地
+      sphereMesh.position.y = 0;
+      sphereBody.velocity.set(0, 0, 0);
+      sphereBody.angularVelocity.set(0, 0, 0);
+    }
+    sphereMesh.position.copy(sphereBody.position) 
+    sphereMesh.quaternion.copy(sphereBody.quaternion) 
+  } 
+  if (planeMesh) { 
+    planeMesh.position.copy(planeBody.position) 
+    planeMesh.quaternion.copy(planeBody.quaternion) 
+  }
+}
+
+
 /**
  * Animate
  */
 const clock = new THREE.Clock()
+let oldElapsedtime = 0
 const tick = () => {
   const elapsedTime = clock.getElapsedTime()
-
+  const deltatime = elapsedTime - oldElapsedtime
+  oldElapsedtime = elapsedTime
 
   // Update controls
   controls.update()
