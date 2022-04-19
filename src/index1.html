@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+
+    <title id="titletext"></title>
+    <style>
+      html,
+      body{
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      #webgl {
+        height: 100vh;
+        border: 2px solid red;
+      }
+      #info{
+        position: absolute;
+        top: 0px;
+        width: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+        text-align: center;
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        pointer-events: none;
+        z-index: 1; /* TODO Solve this in HTML */
+        font-size: 30px;
+        color: aliceblue;
+      }
+    </style>
+    
+  </head>
+  <body>
+    <script src="../node_modules/three/examples/js/libs/inflate.min.js"></script>
+    <div><canvas id="webgl"></canvas></div>
+  </body>
+</html>
+
